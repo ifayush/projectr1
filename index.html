@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TDS Virtual TA - RAG Query System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .file-input {
+            margin-top: 10px;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            width: 100%;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .result-section {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .answer {
+            margin-bottom: 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .links {
+            border-top: 1px solid #e1e5e9;
+            padding-top: 20px;
+        }
+
+        .links h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .link-item {
+            display: block;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #333;
+            border: 1px solid #e1e5e9;
+            transition: all 0.3s ease;
+        }
+
+        .link-item:hover {
+            background: #667eea;
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #c33;
+            margin-top: 20px;
+        }
+
+        .health-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .health-online {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .health-offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .api-config {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            max-width: 300px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="health-status" id="healthStatus">
+        Checking API...
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>🤖 TDS Virtual TA</h1>
+            <p>Ask questions about TDS course content and get intelligent answers</p>
+        </div>
+
+        <div class="main-content">
+            <div class="input-section">
+                <div class="input-group">
+                    <label for="question">Your Question:</label>
+                    <textarea id="question"
+                        placeholder="Ask any question about TDS course content, assignments, or requirements..."
+                        required></textarea>
+                </div>
+
+                <div class="input-group">
+                    <label for="imageFile">Upload Image (Optional):</label>
+                    <input type="file" id="imageFile" class="file-input" accept="image/*">
+                    <small>Upload an image if your question is related to visual content</small>
+                </div>
+
+                <button class="submit-btn" id="submitBtn" onclick="submitQuestion()">
+                    Ask Question
+                </button>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Processing your question...</p>
+            </div>
+
+            <div class="result-section" id="resultSection">
+                <div class="answer" id="answer"></div>
+                <div class="links" id="links"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="api-config">
+        <strong>API Status:</strong> <span id="apiStatus">Configuring...</span><br>
+        <small>Backend: <span id="backendUrl">Loading...</span></small>
+    </div>
+
+    <script>
+        // Railway deployment - will be set automatically
+        let API_BASE_URL = '';
+
+        // Try to detect Railway environment
+        async function detectApiUrl() {
+            // Check if we're in Railway environment
+            if (window.location.hostname.includes('railway.app')) {
+                // In Railway, backend should be on a different service
+                // You'll need to set this manually after deployment
+                API_BASE_URL = 'https://your-backend-service-name-production.up.railway.app';
+            } else {
+                // Local development
+                API_BASE_URL = 'http://localhost:8000';
+            }
+
+            document.getElementById('backendUrl').textContent = API_BASE_URL;
+            checkHealth();
+        }
+
+        // Initialize
+        detectApiUrl();
+
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.json();
+
+                const healthStatus = document.getElementById('healthStatus');
+                const apiStatus = document.getElementById('apiStatus');
+
+                if (data.status === 'healthy') {
+                    healthStatus.textContent = '🟢 API Online';
+                    healthStatus.className = 'health-status health-online';
+                    apiStatus.textContent = 'Connected';
+                    apiStatus.style.color = '#155724';
+                } else {
+                    healthStatus.textContent = '🔴 API Offline';
+                    healthStatus.className = 'health-status health-offline';
+                    apiStatus.textContent = 'Error';
+                    apiStatus.style.color = '#721c24';
+                }
+            } catch (error) {
+                const healthStatus = document.getElementById('healthStatus');
+                const apiStatus = document.getElementById('apiStatus');
+
+                healthStatus.textContent = '🔴 API Offline';
+                healthStatus.className = 'health-status health-offline';
+                apiStatus.textContent = 'Connection Failed';
+                apiStatus.style.color = '#721c24';
+            }
+        }
+
+        async function submitQuestion() {
+            const question = document.getElementById('question').value.trim();
+            const imageFile = document.getElementById('imageFile').files[0];
+
+            if (!question) {
+                alert('Please enter a question');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const resultSection = document.getElementById('resultSection');
+
+            // Show loading state
+            submitBtn.disabled = true;
+            loading.style.display = 'block';
+            resultSection.style.display = 'none';
+
+            try {
+                const formData = {
+                    question: question,
+                    image: null
+                };
+
+                // Convert image to base64 if provided
+                if (imageFile) {
+                    const base64Image = await fileToBase64(imageFile);
+                    formData.image = base64Image;
+                }
+
+                const response = await fetch(`${API_BASE_URL}/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayResult(data);
+
+            } catch (error) {
+                console.error('Error:', error);
+                displayError('Failed to get answer. Please try again.');
+            } finally {
+                submitBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => {
+                    const base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        function displayResult(data) {
+            const resultSection = document.getElementById('resultSection');
+            const answer = document.getElementById('answer');
+            const links = document.getElementById('links');
+
+            // Display answer
+            answer.innerHTML = `<h3>Answer:</h3><p>${data.answer}</p>`;
+
+            // Display links
+            if (data.links && data.links.length > 0) {
+                let linksHtml = '<h3>Related Sources:</h3>';
+                data.links.forEach(link => {
+                    linksHtml += `
+                        <a href="${link.url}" target="_blank" class="link-item">
+                            ${link.text}
+                        </a>
+                    `;
+                });
+                links.innerHTML = linksHtml;
+            } else {
+                links.innerHTML = '<h3>Related Sources:</h3><p>No additional sources found.</p>';
+            }
+
+            resultSection.style.display = 'block';
+        }
+
+        function displayError(message) {
+            const resultSection = document.getElementById('resultSection');
+            resultSection.innerHTML = `<div class="error">${message}</div>`;
+            resultSection.style.display = 'block';
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('question').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                submitQuestion();
+            }
+        });
+    </script>
+</body>
+
+</html>
